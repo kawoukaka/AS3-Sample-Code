@@ -1,0 +1,114 @@
+package ui.doodle.model
+{
+	/**
+	 * bottle class
+	 *1. load 3DSMAX model
+	 *2. set up the  public function "rotate Camera" 
+	 * @author Ling
+	 */
+	import flash.display.*;
+	import flash.events.*;
+	import flash.geom.*;
+
+	import org.papervision3d.cameras.Camera3D;
+	import org.papervision3d.events.FileLoadEvent;
+	import org.papervision3d.materials.BitmapMaterial;
+	import org.papervision3d.objects.DisplayObject3D;
+	import org.papervision3d.objects.parsers.Max3DS;
+	import org.papervision3d.render.BasicRenderEngine;
+	import org.papervision3d.scenes.Scene3D;
+	import org.papervision3d.view.Viewport3D;
+	public class Bottle extends Sprite
+	{
+		public var scene:Scene3D;
+		public var viewport:Viewport3D;
+		public var renderer:BasicRenderEngine;
+		public var camera:Camera3D;
+		public var bodyBmpd:BitmapData;
+
+		private var model:Max3DS;
+		private var cover:DisplayObject3D;
+		private var body:DisplayObject3D;
+		private var shadow:DisplayObject3D;
+		private var coverBmpdMaterial:BitmapMaterial;
+		private var bodyBmpdMaterial:BitmapMaterial;
+		private var shadowBmpdMaterial:BitmapMaterial;
+		private var _smooth:Boolean = false;
+		public function Bottle(filePath:String="")
+		{
+			this.mouseChildren = false;
+			this.mouseEnabled = false;
+			bodyBmpd = new BitmapData(512,512,true,0x00000000);
+			//
+			scene = new Scene3D();
+			viewport = new Viewport3D(MODEL.VIEW_WIDTH,MODEL.VIEW_HEIGHT,false,false);
+			this.addChild(viewport);
+			renderer = new BasicRenderEngine();
+			camera = new Camera3D  ;
+			//camera.zoom=260;
+			camera.focus = 16;
+			model = new Max3DS("bottle");
+
+			coverBmpdMaterial = new BitmapMaterial(new CoverBmpd(0,0));
+			bodyBmpdMaterial = new BitmapMaterial(bodyBmpd);
+			shadowBmpdMaterial = new BitmapMaterial(new ShadowBmpd(0,0));
+			model.load(filePath+"model/bottle.3DS");
+			model.addEventListener(FileLoadEvent.LOAD_COMPLETE,fileLoad);
+
+			this.addEventListener(Event.REMOVED_FROM_STAGE,destroy);
+		}
+		public function set smooth(b:Boolean):void
+		{
+			_smooth = b;
+			coverBmpdMaterial.smooth = _smooth;
+			bodyBmpdMaterial.smooth = _smooth;
+			shadowBmpdMaterial.smooth = _smooth;
+			renderer.renderScene(scene, camera, viewport);
+		}
+		public function get smooth():Boolean
+		{
+			return _smooth;
+		}
+		public function updateBody(o:IBitmapDrawable):void
+		{
+			bodyBmpd.fillRect(MODEL.BODY_RECT,0x00000000);
+			bodyBmpd.draw(o);
+		}
+		private function fileLoad(e:FileLoadEvent):void
+		{
+			scene.addChild(model);
+			if (model.getChildByName("body") != null)
+			{
+				body = model.getChildByName("body") as DisplayObject3D;
+				body.material = bodyBmpdMaterial;
+				//body.material= new EnvMapMaterial(light,bmpd,bmpd);
+			}
+
+			if (model.getChildByName("cover") != null)
+			{
+				cover = model.getChildByName("cover") as DisplayObject3D;
+				cover.material = coverBmpdMaterial;
+			}
+			if (model.getChildByName("shadow") != null)
+			{
+				shadow = model.getChildByName("shadow") as DisplayObject3D;
+				shadow.material = shadowBmpdMaterial;
+			}
+			renderer.renderScene(scene, camera, viewport);
+		}
+		public function rotateCamera(rx:Number,ry:Number,rz:Number):void
+		{
+			camera.x = camera.y = camera.z = 0;
+			camera.rotationX = rx;
+			camera.rotationY = ry;
+			camera.rotationZ = rz;
+			camera.moveBackward(1000);
+			renderer.renderScene(scene, camera, viewport);
+		}
+		private function destroy(evt:Event):void
+		{
+			this.removeEventListener(Event.REMOVED_FROM_STAGE,destroy);
+			model.removeEventListener(FileLoadEvent.LOAD_COMPLETE,fileLoad);
+		}
+	}
+}
