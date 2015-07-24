@@ -1,0 +1,154 @@
+package ui.doodle
+{
+	/**
+	 * BottleModel class
+	 *	1. set up enterframe rotation of water, bottle and light
+	 *	2. set up speed of roatation controled by mouse
+	 * @author Ling
+	 */
+	import flash.display.*;
+	import flash.events.*;
+	import flash.geom.*;
+	
+	import ui.doodle.model.*;
+
+	public class BottleModel extends MovieClip
+	{
+		private var texture:BodyTexture;
+		private var waterTexture:WaterTexture;
+		private var mouseDown:Boolean=false;
+		private var om:Point;
+		private var bottle:Bottle;
+		private var water:Water;
+		private var light:Light;
+		private var speed:Point=new Point(0,0);
+		private var rotate:Point=new Point(0,0);
+		private var lock:Boolean;
+		private var modelLoaded:Boolean=false;
+		private var _smooth:Boolean=false;
+		public function BottleModel()
+		{
+			super();
+			lock=false;
+			bg.alpha=0;
+			texture=new BodyTexture();
+			waterTexture=new WaterTexture();
+			this.addEventListener(Event.ADDED_TO_STAGE,onAddToStage);
+			if(stage!=null){
+				loadModels();
+			}
+		}
+		public function loadModels(filePath:String=""):void
+		{
+			//
+			water=new Water(filePath);
+			water.updateBmpd(waterTexture);
+			addChild(water);
+			//
+			bottle=new Bottle(filePath);
+			bottle.updateBody(texture);
+			addChild(bottle);
+			//
+			light=new Light(filePath);
+			addChild(light);
+			//
+			modelLoaded=true;
+		}
+		private function onAddToStage(evt:Event):void
+		{
+			this.addEventListener( MouseEvent.MOUSE_DOWN,onMDown);
+			this.addEventListener( Event.ENTER_FRAME,onEnter);
+  			stage.addEventListener( MouseEvent.MOUSE_UP,onMUp); 
+  			
+  			this.removeEventListener(Event.ADDED_TO_STAGE,onAddToStage);
+  			this.addEventListener(Event.REMOVED_FROM_STAGE,destroy);
+		}
+		public function set smooth(b:Boolean):void
+		{
+			_smooth=b;
+			bottle.smooth=_smooth;
+			light.smooth=_smooth;
+		}
+		public function get smooth():Boolean
+		{
+			return _smooth;
+		}
+		public function update(o:IBitmapDrawable):void
+		{	
+			texture.update(o);
+			bottle.updateBody(texture);
+		}
+		public function updateWaterColor(c:int):void
+		{
+			waterTexture.bgColor=c;	
+			water.updateBmpd(waterTexture);
+		}
+		public function updateWaterAlpha(n:Number):void
+		{
+			waterTexture.bgAlpha=n;
+			water.updateBmpd(waterTexture);
+		}
+		public function updateTextureBgColor(c:int):void
+		{
+			texture.bgColor=c;
+			bottle.updateBody(texture);
+		}
+		public function updateTextureBgAlpha(n:Number):void
+		{
+			texture.bgAlpha=n;
+			bottle.updateBody(texture);
+		}
+		private function onMDown(evt:MouseEvent):void
+    {
+      if(lock){
+			  return;
+		  }
+      mouseDown=true;
+      om=new Point(mouseX,mouseY);
+    }
+    private function onMUp(evt:MouseEvent):void
+    {
+      if(lock){
+				return;
+			}
+			if(mouseDown){
+	      mouseDown=false;
+				var m:Point=new Point(mouseX,mouseY);
+				var dm:Point=m.subtract(om);
+				om=m.clone();
+				//model.rotationX +=dm.y*.2;
+	      //model.rotationY +=dm.x;
+	      var rx:Number=dm.y*.05;
+				var ry:Number=dm.x*0.1;
+				speed.x+=rx;
+				speed.y+=ry;
+		  }
+    }
+    private function onEnter( event: Event ): void
+		{
+			if(lock){
+				return;
+			}
+			if(speed.length>.1){
+				speed.x*=.9;
+				speed.y*=.9;
+				rotate.x+=speed.x;
+				rotate.y+=speed.y;
+				rotate.x=Math.min(70,rotate.x);
+				rotate.x=Math.max(0,rotate.x);
+				if(modelLoaded){
+	        bottle.rotateCamera(rotate.x,rotate.y,0);
+	        water.rotateCamera(rotate.x,rotate.y,0);
+	        light.rotateCamera(rotate.x,0,0);
+    		}
+   		}
+		}
+		private function destroy(evt:Event):void
+    {
+      this.removeEventListener(Event.REMOVED_FROM_STAGE,destroy);
+      this.removeEventListener( Event.ENTER_FRAME,onEnter );
+  		this.removeEventListener( MouseEvent.MOUSE_DOWN,onMDown );
+  		stage.removeEventListener( MouseEvent.MOUSE_UP,onMUp );
+    }
+	}
+}
